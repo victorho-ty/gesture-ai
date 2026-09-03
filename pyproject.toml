@@ -1,0 +1,17 @@
+[project]
+name = "gesture-ai"
+version = "0.1.0"
+description = "Live MediaPipe hand-landmark webcam"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mediapipe>=0.10.14,<0.11",
+    "opencv-python>=4.10,<5",
+]
+
+[project.scripts]
+gesture-ai = "gesture_ai.app:main"
+
+[build-system]
+requires = ["uv_build>=0.9.13,<0.10.0"]
+build-backend = "uv_build"
