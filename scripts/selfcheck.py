@@ -151,10 +151,43 @@ check("left arm tracks the pinky",
       abs(only_pinky.rotations["shoulderL"][2])
       > abs(only_index.rotations["shoulderL"][2]) + 20.0)
 
-# Elbow follows the middle finger.
-bent, _ = rig_for(curls=(0.0, 0.0, 1.0, 0.0, 0.0))
-check("elbow bends with the middle finger",
-      abs(bent.rotations["foreArmR"][0]) > abs(open_rig.rotations["foreArmR"][0]) + 40.0)
+# Each elbow answers to the finger driving its own arm.
+idx_bent, _ = rig_for(curls=(0.0, 1.0, 0.0, 0.0, 0.0))
+mid_bent, _ = rig_for(curls=(0.0, 0.0, 1.0, 0.0, 0.0))
+check("right elbow bends with the index finger",
+      abs(idx_bent.rotations["foreArmR"][0])
+      > abs(open_rig.rotations["foreArmR"][0]) + 80.0)
+check("middle finger still contributes to the elbow",
+      abs(mid_bent.rotations["foreArmR"][0])
+      > abs(open_rig.rotations["foreArmR"][0]) + 30.0)
+
+# The one that matters in practice. A real finger only spans roughly 0.25-0.67
+# of the curl scale, so feeding raw curl to a joint wastes most of its range.
+# These use measured values rather than the synthetic 0 and 1.
+from gesture_ai.motion import SmoothedPose
+
+def rig_from_curls(curls):
+    return solve(
+        SmoothedPose(
+            present=1.0, wrist=(0.5, 0.5, 0.2), palm=(0.0, 0.0, 0.0),
+            curl=curls, pinch=0.5, spread=0.3,
+            basis=(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+        ),
+        0.0, RigMapping(),
+    )
+
+REAL_EXTENDED, REAL_CURLED = 0.25, 0.67
+ext = rig_from_curls((0.8, REAL_EXTENDED, 0.5, 0.5, REAL_EXTENDED))
+cur = rig_from_curls((0.8, REAL_CURLED, 0.5, 0.5, REAL_CURLED))
+shoulder_travel = abs(ext.rotations["shoulderR"][2] - cur.rotations["shoulderR"][2])
+elbow_travel = abs(ext.rotations["foreArmR"][0] - cur.rotations["foreArmR"][0])
+check("a REAL index finger swings the shoulder widely", shoulder_travel > 120.0,
+      f"{shoulder_travel:.0f} deg across the measured 0.25-0.67 curl band")
+check("a REAL index finger also bends the elbow", elbow_travel > 60.0,
+      f"{elbow_travel:.0f} deg")
+pinky_travel = abs(ext.rotations["shoulderL"][2] - cur.rotations["shoulderL"][2])
+check("a REAL pinky swings the other shoulder widely", pinky_travel > 120.0,
+      f"{pinky_travel:.0f} deg")
 
 print()
 print("== rig: no gimbal flip through a full roll ==")

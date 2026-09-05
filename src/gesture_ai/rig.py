@@ -88,8 +88,8 @@ SKELETON: tuple[Bone, ...] = (
     Bone("hairTop", "head", (0, 1.45, -0.08), (1.85, 0.65, 1.8), (0, 0, 0), _HAIR),
     Bone("fringe", "head", (0, 1.15, 0.72), (1.7, 0.55, 0.4), (0, 0, 0), _HAIR),
     # Far enough out to clear the 1.75-wide head, or they vanish behind it.
-    Bone("hairL", "head", (-1.05, 1.15, -0.05), (0.52, 1.5, 0.52), (0, -0.7, 0), _HAIR),
-    Bone("hairR", "head", (1.05, 1.15, -0.05), (0.52, 1.5, 0.52), (0, -0.7, 0), _HAIR),
+    Bone("hairL", "head", (-1.16, 1.15, -0.16), (0.52, 1.5, 0.52), (0, -0.7, 0), _HAIR),
+    Bone("hairR", "head", (1.16, 1.15, -0.16), (0.52, 1.5, 0.52), (0, -0.7, 0), _HAIR),
     Bone("tieL", "hairL", (0, -0.12, 0), (0.62, 0.26, 0.62), (0, 0, 0), _YELLOW),
     Bone("tieR", "hairR", (0, -0.12, 0), (0.62, 0.26, 0.62), (0, 0, 0), _YELLOW),
     Bone("bow", "head", (0, 1.8, 0.1), (0.32, 0.32, 0.32), (0, 0, 0), _RED),
@@ -103,13 +103,13 @@ SKELETON: tuple[Bone, ...] = (
     Bone("blushR", "head", (0.68, 0.46, 0.8), (0.3, 0.17, 0.06), (0, 0, 0), _BLUSH),
     Bone("mouth", "head", (0, 0.42, 0.87), (0.15, 0.1, 0.05), (0, 0, 0), _ROSE),
 
-    Bone("shoulderL", "chest", (-0.86, 0.45, 0), (0.5, 0.5, 0.5), (0, 0, 0), _ROSE),
+    Bone("shoulderL", "chest", (-1.0, 0.42, 0.08), (0.5, 0.5, 0.5), (0, 0, 0), _ROSE),
     Bone("upperArmL", "shoulderL", (0, -0.1, 0), (0.36, 0.8, 0.36), (0, -0.4, 0), _BODY),
     Bone("foreArmL", "upperArmL", (0, -0.8, 0), (0.33, 0.7, 0.33), (0, -0.35, 0), _PLATE),
     Bone("clawL", "foreArmL", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
     Bone("clawL2", "foreArmL", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
 
-    Bone("shoulderR", "chest", (0.86, 0.45, 0), (0.5, 0.5, 0.5), (0, 0, 0), _ROSE),
+    Bone("shoulderR", "chest", (1.0, 0.42, 0.08), (0.5, 0.5, 0.5), (0, 0, 0), _ROSE),
     Bone("upperArmR", "shoulderR", (0, -0.1, 0), (0.36, 0.8, 0.36), (0, -0.4, 0), _BODY),
     Bone("foreArmR", "upperArmR", (0, -0.8, 0), (0.33, 0.7, 0.33), (0, -0.35, 0), _PLATE),
     Bone("clawR", "foreArmR", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
@@ -154,13 +154,31 @@ class RigMapping:
     # out sideways and 180 is straight overhead, so 165 puts the arms up in a
     # cheer. Small ranges read as a mannequin twitching; big ones read as a
     # character performing.
-    arm_raise: tuple[float, float] = (-12.0, 165.0)
-    elbow: tuple[float, float] = (4.0, -148.0)
-    arm_swing: tuple[float, float] = (4.0, -42.0)
-    leg_bend: tuple[float, float] = (-6.0, 62.0)
-    knee: tuple[float, float] = (5.0, -92.0)
-    stance: tuple[float, float] = (-3.0, 30.0)
-    claw: tuple[float, float] = (2.0, 60.0)
+    arm_raise: tuple[float, float] = (-30.0, 150.0)
+    """Tops out short of vertical on purpose. A shoulder at 178 puts the arm
+    straight up hugging the oversized head, where it is barely visible; the
+    diagonal near 140 reads far more clearly and still gives 180 of travel."""
+    elbow: tuple[float, float] = (10.0, -158.0)
+    arm_forward: tuple[float, float] = (14.0, -58.0)
+    """Shoulder swing on X. Without it the arms sweep in one flat plane, which
+    reads as a cardboard cut-out however wide the range is."""
+    arm_swing: tuple[float, float] = (2.0, -20.0)
+    """Kept gentle. Spread used to subtract enough that splaying the fingers
+    pulled the arms back *down*, which fought the finger driving them."""
+    leg_bend: tuple[float, float] = (-8.0, 74.0)
+    knee: tuple[float, float] = (6.0, -104.0)
+    stance: tuple[float, float] = (-4.0, 36.0)
+    claw: tuple[float, float] = (2.0, 68.0)
+
+    # Measured, not guessed: a real index finger only spans about 0.25-0.67 of
+    # the curl scale and a pinky 0.31-0.71, so feeding raw curl into a joint
+    # wastes well over half its range and never reaches either end. Stretching
+    # the observed band across the full 0..1 is what actually makes the puppet
+    # expressive -- widening the joint ranges alone does almost nothing.
+    curl_band: tuple[float, float] = (0.27, 0.74)
+    thumb_band: tuple[float, float] = (0.64, 1.0)
+    """The thumb sits much higher and narrower than the fingers; it folds
+    across the palm rather than toward the wrist, so it needs its own band."""
     crouch: float = 0.85
     """World units the body sinks at full leg bend, so a deep bend reads as a
     squat rather than the feet simply swinging forward."""
@@ -188,6 +206,14 @@ class JointPose:
 
 def _lerp(a: float, b: float, t: float) -> float:
     return a + (b - a) * t
+
+
+def _response(value: float, band: tuple[float, float]) -> float:
+    """Stretch a finger's usable curl band across the full 0..1 drive range."""
+    lo, hi = band
+    if abs(hi - lo) < 1e-9:
+        return 0.0
+    return max(0.0, min(1.0, (value - lo) / (hi - lo)))
 
 
 def _remap(value: float, lo: float, hi: float, out_lo: float, out_hi: float) -> float:
@@ -243,13 +269,20 @@ def solve(pose: SmoothedPose, elapsed: float, m: RigMapping) -> JointPose:
     lean_pitch = dy * energy * m.lean * 0.5 * live
 
     curl = pose.curl if len(pose.curl) == 5 else (0.0,) * 5
-    thumb, index, middle, ring, pinky = curl
+    thumb = _response(curl[0], m.thumb_band)
+    index, middle, ring, pinky = (_response(c, m.curl_band) for c in curl[1:])
 
     # -- limbs ------------------------------------------------------------
     # Extending a finger raises the matching arm, so an open palm is arms-up.
     raise_r = _lerp(*m.arm_raise, 1.0 - index) * live
     raise_l = _lerp(*m.arm_raise, 1.0 - pinky) * live
-    elbow = _lerp(*m.elbow, middle) * live
+    # Each elbow answers mostly to the finger that drives its own arm. Driving
+    # both from the middle finger alone meant raising just the index swung the
+    # shoulder while the elbow sat still, which is what made it look stiff.
+    elbow_r = _lerp(*m.elbow, 0.68 * index + 0.32 * middle) * live
+    elbow_l = _lerp(*m.elbow, 0.68 * pinky + 0.32 * middle) * live
+    forward_r = _lerp(*m.arm_forward, 1.0 - index) * live
+    forward_l = _lerp(*m.arm_forward, 1.0 - pinky) * live
     swing = _lerp(*m.arm_swing, pose.spread) * live
     leg = _lerp(*m.leg_bend, ring) * live
     knee_angle = _lerp(*m.knee, ring) * live
@@ -262,7 +295,8 @@ def solve(pose: SmoothedPose, elapsed: float, m: RigMapping) -> JointPose:
     # Idle: arms drift down, a slow breathing sway.
     raise_r = _lerp(12.0 + breath * 4.0, raise_r, live)
     raise_l = _lerp(12.0 - breath * 4.0, raise_l, live)
-    elbow = _lerp(-14.0 - breath * 5.0, elbow, live)
+    elbow_r = _lerp(-14.0 - breath * 5.0, elbow_r, live)
+    elbow_l = _lerp(-14.0 + breath * 5.0, elbow_l, live)
 
     head_yaw = torso_yaw * m.head_follow + pose.motion.turn_speed * m.head_lead
     head_pitch = -pitch * 0.25 * live + breath * 2.0
@@ -276,14 +310,14 @@ def solve(pose: SmoothedPose, elapsed: float, m: RigMapping) -> JointPose:
         # what sells the puppet as having weight and momentum.
         "hairL": (breath * 3.0, 0.0, 6.0 + breath * 5.0 + energy * 26.0),
         "hairR": (breath * 3.0, 0.0, -6.0 - breath * 5.0 - energy * 26.0),
-        "shoulderL": (0.0, 0.0, -raise_l - swing),
+        "shoulderL": (forward_l, 0.0, -raise_l - swing),
         "upperArmL": (0.0, 0.0, 0.0),
-        "foreArmL": (elbow, 0.0, 0.0),
+        "foreArmL": (elbow_l, 0.0, 0.0),
         "clawL": (0.0, 0.0, claw_open),
         "clawL2": (0.0, 0.0, -claw_open),
-        "shoulderR": (0.0, 0.0, raise_r + swing),
+        "shoulderR": (forward_r, 0.0, raise_r + swing),
         "upperArmR": (0.0, 0.0, 0.0),
-        "foreArmR": (elbow, 0.0, 0.0),
+        "foreArmR": (elbow_r, 0.0, 0.0),
         "clawR": (0.0, 0.0, claw_open),
         "clawR2": (0.0, 0.0, -claw_open),
         "pelvis": (0.0, torso_yaw * 0.3, 0.0),
