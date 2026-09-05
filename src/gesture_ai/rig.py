@@ -47,48 +47,73 @@ class Bone:
     """Drawn at full brightness and pulsed by motion energy."""
 
 
-_BODY = (150, 146, 205)
-_PLATE = (176, 172, 226)
-_DARK = (74, 72, 104)
-_ACCENT = (240, 130, 55)
-_VISOR = (90, 210, 235)
+# Warm palette: pink body, cherry accents, yellow trim. Deliberately no
+# near-black -- the darkest tone is a deep rose, so shadowed faces stay warm
+# instead of reading as grime.
+_BODY = (255, 156, 190)      # soft pink: torso, upper limbs
+_PLATE = (255, 216, 230)     # blush: head, chest, lower limbs
+_ROSE = (214, 84, 126)       # deep rose: joints and pelvis
+_RED = (240, 84, 104)        # cherry: skirt, heart
+_YELLOW = (255, 208, 74)     # warm yellow: bow, shoes, trim
+_HAIR = (255, 130, 165)
+_EYE = (86, 38, 66)
+_GLINT = (255, 252, 255)
+_BLUSH = (255, 134, 158)
 
+# Chibi proportions: a head roughly as tall as the whole torso, short stubby
+# limbs, big feet. The silhouette is what reads as cute long before the colours
+# do, so the head is oversized and everything else is compressed.
+#
 # Parents always precede their children, so one forward pass resolves the
 # hierarchy without recursion or sorting.
 SKELETON: tuple[Bone, ...] = (
     Bone("root", None, (0, 0, 0), (0, 0, 0), (0, 0, 0), _BODY),
 
-    # The pelvis hangs off the root, and the legs off the pelvis rather than
-    # off the torso. That keeps the feet planted when the palm turns: rotating
-    # the torso would otherwise swing the whole lower body and the puppet would
-    # look like it was toppling instead of twisting.
-    Bone("pelvis", "root", (0, 0, 0), (1.35, 0.62, 1.0), (0, 0, 0), _DARK),
-    Bone("thighL", "pelvis", (-0.42, -0.3, 0), (0.5, 1.15, 0.5), (0, -0.57, 0), _BODY),
-    Bone("shinL", "thighL", (0, -1.15, 0), (0.44, 1.05, 0.44), (0, -0.52, 0), _PLATE),
-    Bone("footL", "shinL", (0, -1.05, 0), (0.55, 0.26, 0.85), (0, -0.13, 0.16), _DARK),
-    Bone("thighR", "pelvis", (0.42, -0.3, 0), (0.5, 1.15, 0.5), (0, -0.57, 0), _BODY),
-    Bone("shinR", "thighR", (0, -1.15, 0), (0.44, 1.05, 0.44), (0, -0.52, 0), _PLATE),
-    Bone("footR", "shinR", (0, -1.05, 0), (0.55, 0.26, 0.85), (0, -0.13, 0.16), _DARK),
+    # Legs hang off the pelvis, not the torso, so the feet stay planted when
+    # the palm turns and twists the upper body.
+    Bone("pelvis", "root", (0, 0, 0), (1.15, 0.5, 0.85), (0, 0, 0), _ROSE),
+    Bone("skirt", "pelvis", (0, -0.05, 0), (1.75, 0.52, 1.35), (0, -0.22, 0), _RED),
+    Bone("thighL", "pelvis", (-0.34, -0.25, 0), (0.46, 0.75, 0.46), (0, -0.37, 0), _BODY),
+    Bone("shinL", "thighL", (0, -0.75, 0), (0.42, 0.7, 0.42), (0, -0.35, 0), _PLATE),
+    Bone("footL", "shinL", (0, -0.7, 0), (0.58, 0.3, 0.8), (0, -0.15, 0.16), _YELLOW),
+    Bone("thighR", "pelvis", (0.34, -0.25, 0), (0.46, 0.75, 0.46), (0, -0.37, 0), _BODY),
+    Bone("shinR", "thighR", (0, -0.75, 0), (0.42, 0.7, 0.42), (0, -0.35, 0), _PLATE),
+    Bone("footR", "shinR", (0, -0.7, 0), (0.58, 0.3, 0.8), (0, -0.15, 0.16), _YELLOW),
 
-    Bone("torso", "pelvis", (0, 0.3, 0), (1.45, 1.5, 0.92), (0, 0.72, 0), _BODY),
-    Bone("chest", "torso", (0, 1.5, 0), (2.1, 1.1, 1.15), (0, 0.32, 0), _PLATE),
-    Bone("collar", "chest", (0, 0.8, 0.1), (1.0, 0.28, 0.55), (0, 0, 0), _DARK),
-    Bone("head", "chest", (0, 0.92, 0), (1.02, 0.92, 1.0), (0, 0.4, 0), _PLATE),
-    Bone("visor", "head", (0, 0.44, 0.5), (0.76, 0.3, 0.12), (0, 0, 0), _VISOR, True),
-    Bone("antenna", "head", (0.3, 0.84, 0), (0.07, 0.6, 0.07), (0, 0.3, 0), _ACCENT),
-    Bone("antenna_tip", "antenna", (0, 0.62, 0), (0.15, 0.15, 0.15), (0, 0, 0), _ACCENT, True),
+    Bone("torso", "pelvis", (0, 0.25, 0), (1.2, 1.0, 0.8), (0, 0.5, 0), _BODY),
+    Bone("chest", "torso", (0, 1.0, 0), (1.5, 0.9, 0.95), (0, 0.35, 0), _PLATE),
+    Bone("heart", "chest", (0, 0.35, 0.5), (0.36, 0.36, 0.1), (0, 0, 0), _RED, True),
 
-    Bone("shoulderL", "chest", (-1.18, 0.42, 0), (0.6, 0.6, 0.6), (0, 0, 0), _DARK),
-    Bone("upperArmL", "shoulderL", (0, -0.12, 0), (0.42, 1.2, 0.42), (0, -0.6, 0), _BODY),
-    Bone("foreArmL", "upperArmL", (0, -1.2, 0), (0.37, 1.1, 0.37), (0, -0.55, 0), _PLATE),
-    Bone("clawL", "foreArmL", (0, -1.1, 0), (0.19, 0.48, 0.42), (0, -0.24, 0), _ACCENT),
-    Bone("clawL2", "foreArmL", (0, -1.1, 0), (0.19, 0.48, 0.42), (0, -0.24, 0), _ACCENT),
+    Bone("head", "chest", (0, 0.8, 0), (1.75, 1.6, 1.7), (0, 0.75, 0), _PLATE),
+    Bone("hairTop", "head", (0, 1.45, -0.08), (1.85, 0.65, 1.8), (0, 0, 0), _HAIR),
+    Bone("fringe", "head", (0, 1.15, 0.72), (1.7, 0.55, 0.4), (0, 0, 0), _HAIR),
+    # Far enough out to clear the 1.75-wide head, or they vanish behind it.
+    Bone("hairL", "head", (-1.16, 1.15, -0.16), (0.52, 1.5, 0.52), (0, -0.7, 0), _HAIR),
+    Bone("hairR", "head", (1.16, 1.15, -0.16), (0.52, 1.5, 0.52), (0, -0.7, 0), _HAIR),
+    Bone("tieL", "hairL", (0, -0.12, 0), (0.62, 0.26, 0.62), (0, 0, 0), _YELLOW),
+    Bone("tieR", "hairR", (0, -0.12, 0), (0.62, 0.26, 0.62), (0, 0, 0), _YELLOW),
+    Bone("bow", "head", (0, 1.8, 0.1), (0.32, 0.32, 0.32), (0, 0, 0), _RED),
+    Bone("bowL", "bow", (-0.46, 0.05, 0), (0.62, 0.48, 0.26), (0, 0, 0), _YELLOW),
+    Bone("bowR", "bow", (0.46, 0.05, 0), (0.62, 0.48, 0.26), (0, 0, 0), _YELLOW),
+    Bone("eyeL", "head", (-0.4, 0.78, 0.85), (0.34, 0.46, 0.08), (0, 0, 0), _EYE),
+    Bone("eyeR", "head", (0.4, 0.78, 0.85), (0.34, 0.46, 0.08), (0, 0, 0), _EYE),
+    Bone("glintL", "head", (-0.47, 0.9, 0.9), (0.13, 0.17, 0.06), (0, 0, 0), _GLINT, True),
+    Bone("glintR", "head", (0.33, 0.9, 0.9), (0.13, 0.17, 0.06), (0, 0, 0), _GLINT, True),
+    Bone("blushL", "head", (-0.68, 0.46, 0.8), (0.3, 0.17, 0.06), (0, 0, 0), _BLUSH),
+    Bone("blushR", "head", (0.68, 0.46, 0.8), (0.3, 0.17, 0.06), (0, 0, 0), _BLUSH),
+    Bone("mouth", "head", (0, 0.42, 0.87), (0.15, 0.1, 0.05), (0, 0, 0), _ROSE),
 
-    Bone("shoulderR", "chest", (1.18, 0.42, 0), (0.6, 0.6, 0.6), (0, 0, 0), _DARK),
-    Bone("upperArmR", "shoulderR", (0, -0.12, 0), (0.42, 1.2, 0.42), (0, -0.6, 0), _BODY),
-    Bone("foreArmR", "upperArmR", (0, -1.2, 0), (0.37, 1.1, 0.37), (0, -0.55, 0), _PLATE),
-    Bone("clawR", "foreArmR", (0, -1.1, 0), (0.19, 0.48, 0.42), (0, -0.24, 0), _ACCENT),
-    Bone("clawR2", "foreArmR", (0, -1.1, 0), (0.19, 0.48, 0.42), (0, -0.24, 0), _ACCENT),
+    Bone("shoulderL", "chest", (-1.0, 0.42, 0.08), (0.5, 0.5, 0.5), (0, 0, 0), _ROSE),
+    Bone("upperArmL", "shoulderL", (0, -0.1, 0), (0.36, 0.8, 0.36), (0, -0.4, 0), _BODY),
+    Bone("foreArmL", "upperArmL", (0, -0.8, 0), (0.33, 0.7, 0.33), (0, -0.35, 0), _PLATE),
+    Bone("clawL", "foreArmL", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
+    Bone("clawL2", "foreArmL", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
+
+    Bone("shoulderR", "chest", (1.0, 0.42, 0.08), (0.5, 0.5, 0.5), (0, 0, 0), _ROSE),
+    Bone("upperArmR", "shoulderR", (0, -0.1, 0), (0.36, 0.8, 0.36), (0, -0.4, 0), _BODY),
+    Bone("foreArmR", "upperArmR", (0, -0.8, 0), (0.33, 0.7, 0.33), (0, -0.35, 0), _PLATE),
+    Bone("clawR", "foreArmR", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
+    Bone("clawR2", "foreArmR", (0, -0.7, 0), (0.22, 0.42, 0.4), (0, -0.2, 0), _YELLOW),
 )
 
 BONE_INDEX = {bone.name: i for i, bone in enumerate(SKELETON)}
@@ -103,7 +128,7 @@ class RigMapping:
     """
 
     # Where the puppet sits, from wrist position and apparent hand size.
-    base_height: float = 2.7
+    base_height: float = 2.0
     """Root height that puts the feet on the ground plane. The skeleton hangs
     downward from the root, so without this the puppet renders half-buried."""
     pan: float = 7.0
@@ -125,13 +150,38 @@ class RigMapping:
     """Degrees of extra head turn per degree/second of palm rotation."""
 
     # Limbs from finger curl. Arms hang at rest and lift as fingers extend.
-    arm_raise: tuple[float, float] = (8.0, 105.0)
-    elbow: tuple[float, float] = (-4.0, -125.0)
-    arm_swing: tuple[float, float] = (2.0, -22.0)
-    leg_bend: tuple[float, float] = (-2.0, 38.0)
-    knee: tuple[float, float] = (2.0, -55.0)
-    stance: tuple[float, float] = (-1.0, 16.0)
-    claw: tuple[float, float] = (2.0, 38.0)
+    # Ranges are deliberately theatrical: a shoulder at 90 degrees is straight
+    # out sideways and 180 is straight overhead, so 165 puts the arms up in a
+    # cheer. Small ranges read as a mannequin twitching; big ones read as a
+    # character performing.
+    arm_raise: tuple[float, float] = (-30.0, 150.0)
+    """Tops out short of vertical on purpose. A shoulder at 178 puts the arm
+    straight up hugging the oversized head, where it is barely visible; the
+    diagonal near 140 reads far more clearly and still gives 180 of travel."""
+    elbow: tuple[float, float] = (10.0, -158.0)
+    arm_forward: tuple[float, float] = (14.0, -58.0)
+    """Shoulder swing on X. Without it the arms sweep in one flat plane, which
+    reads as a cardboard cut-out however wide the range is."""
+    arm_swing: tuple[float, float] = (2.0, -20.0)
+    """Kept gentle. Spread used to subtract enough that splaying the fingers
+    pulled the arms back *down*, which fought the finger driving them."""
+    leg_bend: tuple[float, float] = (-8.0, 74.0)
+    knee: tuple[float, float] = (6.0, -104.0)
+    stance: tuple[float, float] = (-4.0, 36.0)
+    claw: tuple[float, float] = (2.0, 68.0)
+
+    # Measured, not guessed: a real index finger only spans about 0.25-0.67 of
+    # the curl scale and a pinky 0.31-0.71, so feeding raw curl into a joint
+    # wastes well over half its range and never reaches either end. Stretching
+    # the observed band across the full 0..1 is what actually makes the puppet
+    # expressive -- widening the joint ranges alone does almost nothing.
+    curl_band: tuple[float, float] = (0.27, 0.74)
+    thumb_band: tuple[float, float] = (0.64, 1.0)
+    """The thumb sits much higher and narrower than the fingers; it folds
+    across the palm rather than toward the wrist, so it needs its own band."""
+    crouch: float = 0.85
+    """World units the body sinks at full leg bend, so a deep bend reads as a
+    squat rather than the feet simply swinging forward."""
 
     # Secondary motion: the puppet leans into its own movement.
     lean: float = 26.0
@@ -156,6 +206,14 @@ class JointPose:
 
 def _lerp(a: float, b: float, t: float) -> float:
     return a + (b - a) * t
+
+
+def _response(value: float, band: tuple[float, float]) -> float:
+    """Stretch a finger's usable curl band across the full 0..1 drive range."""
+    lo, hi = band
+    if abs(hi - lo) < 1e-9:
+        return 0.0
+    return max(0.0, min(1.0, (value - lo) / (hi - lo)))
 
 
 def _remap(value: float, lo: float, hi: float, out_lo: float, out_hi: float) -> float:
@@ -211,23 +269,34 @@ def solve(pose: SmoothedPose, elapsed: float, m: RigMapping) -> JointPose:
     lean_pitch = dy * energy * m.lean * 0.5 * live
 
     curl = pose.curl if len(pose.curl) == 5 else (0.0,) * 5
-    thumb, index, middle, ring, pinky = curl
+    thumb = _response(curl[0], m.thumb_band)
+    index, middle, ring, pinky = (_response(c, m.curl_band) for c in curl[1:])
 
     # -- limbs ------------------------------------------------------------
     # Extending a finger raises the matching arm, so an open palm is arms-up.
     raise_r = _lerp(*m.arm_raise, 1.0 - index) * live
     raise_l = _lerp(*m.arm_raise, 1.0 - pinky) * live
-    elbow = _lerp(*m.elbow, middle) * live
+    # Each elbow answers mostly to the finger that drives its own arm. Driving
+    # both from the middle finger alone meant raising just the index swung the
+    # shoulder while the elbow sat still, which is what made it look stiff.
+    elbow_r = _lerp(*m.elbow, 0.68 * index + 0.32 * middle) * live
+    elbow_l = _lerp(*m.elbow, 0.68 * pinky + 0.32 * middle) * live
+    forward_r = _lerp(*m.arm_forward, 1.0 - index) * live
+    forward_l = _lerp(*m.arm_forward, 1.0 - pinky) * live
     swing = _lerp(*m.arm_swing, pose.spread) * live
     leg = _lerp(*m.leg_bend, ring) * live
     knee_angle = _lerp(*m.knee, ring) * live
+    # Drop the hips as the knees bend; without this a deep bend just kicks the
+    # feet forward and the puppet looks like it is floating.
+    ty -= m.crouch * ring * live
     stance = _lerp(*m.stance, pose.spread) * live
     claw_open = _lerp(*m.claw, pose.pinch) * live
 
     # Idle: arms drift down, a slow breathing sway.
     raise_r = _lerp(12.0 + breath * 4.0, raise_r, live)
     raise_l = _lerp(12.0 - breath * 4.0, raise_l, live)
-    elbow = _lerp(-14.0 - breath * 5.0, elbow, live)
+    elbow_r = _lerp(-14.0 - breath * 5.0, elbow_r, live)
+    elbow_l = _lerp(-14.0 + breath * 5.0, elbow_l, live)
 
     head_yaw = torso_yaw * m.head_follow + pose.motion.turn_speed * m.head_lead
     head_pitch = -pitch * 0.25 * live + breath * 2.0
@@ -236,15 +305,19 @@ def solve(pose: SmoothedPose, elapsed: float, m: RigMapping) -> JointPose:
         "torso": (lean_pitch, 0.0, lean_roll),
         "chest": (0.0, torso_yaw * 0.2, 0.0),
         "head": (head_pitch, head_yaw, -lean_roll * 0.4),
-        "antenna": (0.0, 0.0, breath * 7.0 + energy * 12.0),
-        "shoulderL": (0.0, 0.0, -raise_l - swing),
+        "bow": (0.0, 0.0, breath * 5.0 + energy * 14.0),
+        # Twin tails splay outward and lift with movement, which is most of
+        # what sells the puppet as having weight and momentum.
+        "hairL": (breath * 3.0, 0.0, 6.0 + breath * 5.0 + energy * 26.0),
+        "hairR": (breath * 3.0, 0.0, -6.0 - breath * 5.0 - energy * 26.0),
+        "shoulderL": (forward_l, 0.0, -raise_l - swing),
         "upperArmL": (0.0, 0.0, 0.0),
-        "foreArmL": (elbow, 0.0, 0.0),
+        "foreArmL": (elbow_l, 0.0, 0.0),
         "clawL": (0.0, 0.0, claw_open),
         "clawL2": (0.0, 0.0, -claw_open),
-        "shoulderR": (0.0, 0.0, raise_r + swing),
+        "shoulderR": (forward_r, 0.0, raise_r + swing),
         "upperArmR": (0.0, 0.0, 0.0),
-        "foreArmR": (elbow, 0.0, 0.0),
+        "foreArmR": (elbow_r, 0.0, 0.0),
         "clawR": (0.0, 0.0, claw_open),
         "clawR2": (0.0, 0.0, -claw_open),
         "pelvis": (0.0, torso_yaw * 0.3, 0.0),

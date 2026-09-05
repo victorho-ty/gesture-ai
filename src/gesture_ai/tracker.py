@@ -27,6 +27,63 @@ import mediapipe as mp
 
 from gesture_ai.features import EulerUnwrapper, HandFeatures, hand_features
 
+# Tried in order. The default backend is what the original application uses and
+# is usually fastest; DirectShow is last because when a camera is wedged it can
+# block for 25 seconds before admitting it cannot open the device.
+_BACKENDS: tuple[tuple[str, int | None], ...] = (
+    ("default", None),
+    ("MSMF", cv2.CAP_MSMF),
+    ("DirectShow", cv2.CAP_DSHOW),
+)
+
+# Seconds to wait for a backend that opened to actually deliver a frame. A
+# camera left in a bad state by a hard-killed process opens happily and then
+# never produces anything, so opening is not proof that it works.
+_FIRST_FRAME_TIMEOUT = 3.0
+
+
+def open_camera(index: int, width: int, height: int, fps: float):
+    """Open a camera, trying each backend until one delivers a real frame.
+
+    Returns ``(capture, backend_name)``, or ``(None, None)`` with the reasons
+    collected in ``attempts``.
+    """
+    attempts: list[str] = []
+    for name, backend in _BACKENDS:
+        started = time.perf_counter()
+        capture = (
+            cv2.VideoCapture(index)
+            if backend is None
+            else cv2.VideoCapture(index, backend)
+        )
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        capture.set(cv2.CAP_PROP_FPS, fps)
+        # A 1-frame driver buffer keeps read() from handing back stale frames,
+        # which would show up as latency no filter can remove.
+        capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+        if not capture.isOpened():
+            attempts.append(
+                f"{name}: could not open camera {index} "
+                f"({time.perf_counter() - started:.1f}s)"
+            )
+            capture.release()
+            continue
+
+        deadline = time.perf_counter() + _FIRST_FRAME_TIMEOUT
+        while time.perf_counter() < deadline:
+            ok, frame = capture.read()
+            if ok and frame is not None:
+                return capture, name, attempts
+        attempts.append(
+            f"{name}: opened camera {index} but it delivered no frames in "
+            f"{_FIRST_FRAME_TIMEOUT:.0f}s"
+        )
+        capture.release()
+
+    return None, None, attempts
+
 
 @dataclass(frozen=True)
 class TrackerFrame:
@@ -79,12 +136,13 @@ class HandTracker:
         self._ready = threading.Event()
         self._error: str | None = None
         self._measured_fps = 0.0
+        self._backend: str | None = None
         self._infer_ms = 0.0
         self._seq = 0
 
     # -- lifecycle ---------------------------------------------------------
 
-    def start(self, timeout: float = 20.0) -> None:
+    def start(self, timeout: float = 60.0) -> None:
         """Start the thread and block until the camera and model are live."""
         self._thread = threading.Thread(
             target=self._run, name="hand-tracker", daemon=True
@@ -92,7 +150,12 @@ class HandTracker:
         self._thread.start()
         if not self._ready.wait(timeout):
             self.stop()
-            raise RuntimeError("Tracker did not start within the timeout.")
+            raise RuntimeError(
+                f"Camera {self._camera} did not respond within {timeout:.0f}s. "
+                "It is most likely in use by another application, or stuck "
+                "after a process was killed without releasing it -- unplug and "
+                "reconnect the webcam."
+            )
         if self._error:
             self.stop()
             raise RuntimeError(self._error)
@@ -127,6 +190,11 @@ class HandTracker:
         return self._infer_ms
 
     @property
+    def backend(self) -> str | None:
+        """Which OpenCV backend actually worked, for diagnostics."""
+        return self._backend
+
+    @property
     def mirror(self) -> bool:
         return self._mirror
 
@@ -139,17 +207,21 @@ class HandTracker:
     def _run(self) -> None:
         capture = None
         try:
-            capture = cv2.VideoCapture(self._camera, cv2.CAP_DSHOW)
-            capture.set(cv2.CAP_PROP_FRAME_WIDTH, self._width)
-            capture.set(cv2.CAP_PROP_FRAME_HEIGHT, self._height)
-            capture.set(cv2.CAP_PROP_FPS, self._fps)
-            # A 1-frame driver buffer keeps read() from handing back stale
-            # frames, which would show up as latency no filter can remove.
-            capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            if not capture.isOpened():
-                self._error = f"Could not open camera index {self._camera}."
+            capture, backend, attempts = open_camera(
+                self._camera, self._width, self._height, self._fps
+            )
+            if capture is None:
+                detail = "\n  ".join(attempts)
+                self._error = (
+                    f"Could not get frames from camera {self._camera}.\n"
+                    f"  {detail}\n"
+                    "A camera that opens but delivers nothing is usually stuck "
+                    "after a process was killed without releasing it. Unplug and "
+                    "reconnect the webcam, or close whatever else is using it."
+                )
                 self._ready.set()
                 return
+            self._backend = backend
 
             vision = mp.tasks.vision
             options = vision.HandLandmarkerOptions(

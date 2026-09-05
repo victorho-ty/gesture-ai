@@ -143,8 +143,13 @@ Semantics:
 uv run gesture-ai-puppet
 ```
 
-A humanoid mecha, built from primitives, driven live by your hand over a dimmed
-camera backdrop. Renders at 60 fps on integrated graphics.
+A chibi robot girl -- pink, with twin tails, a bow and a red skirt -- built
+from primitives and driven live by your hand over a dimmed camera backdrop.
+Renders at 60 fps on integrated graphics.
+
+Joint ranges are deliberately theatrical: an open palm throws both arms
+overhead, a fist tucks them in and drops into a crouch. Everything is a field on
+`RigMapping` in `src/gesture_ai/rig.py` if you want it calmer or wilder.
 
 | Key | Action |
 | --- | --- |
@@ -193,6 +198,15 @@ the 30 Hz pose stream up to 60 Hz.
 
 Measured on an i9-11900H with Intel UHD integrated graphics: **60.0 fps render,
 worst frame 17.7 ms, ~29 poses/sec, 8-13 ms inference.**
+
+### If the camera will not start
+
+`gesture-ai-puppet` tries the default OpenCV backend, then MSMF, then
+DirectShow, and reports what each one did. A camera that **opens but delivers
+no frames** is stuck -- usually after a process was killed without releasing
+it. Unplug and reconnect the webcam; closing and reopening the app will not
+clear it. DirectShow in particular can block for 25 seconds before admitting
+it cannot open a wedged device.
 
 ### Rotation without gimbal lock
 
