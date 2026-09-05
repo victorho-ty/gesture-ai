@@ -245,8 +245,8 @@ def main(argv: list[str] | None = None) -> int:
         rl.set_target_fps(args.fps)
 
     camera = rl.Camera3D(
-        rl.Vector3(0.0, 4.2, 18.0),
-        rl.Vector3(0.0, 3.2, 0.0),
+        rl.Vector3(0.0, 3.8, 16.0),
+        rl.Vector3(0.0, 2.9, 0.0),
         rl.Vector3(0.0, 1.0, 0.0),
         48.0,
         rl.CameraProjection.CAMERA_PERSPECTIVE,

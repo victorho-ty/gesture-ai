@@ -51,16 +51,20 @@ void main()
     vec3 v = normalize(viewPos - fragPos);
     vec3 h = normalize(l + v);
 
-    float diff = max(dot(n, l), 0.0);
-    float spec = pow(max(dot(n, h), 0.0), 24.0) * 0.30;
+    // Half-lambert: wraps the light around the form so faces turned away stay
+    // coloured instead of going to mud. Flatter and brighter, which is what a
+    // toy character wants.
+    float diff = dot(n, l) * 0.5 + 0.5;
+    diff *= diff;
+    float spec = pow(max(dot(n, h), 0.0), 24.0) * 0.22;
     // Rim term: brightest where the surface turns away, which draws the
     // silhouette and keeps the puppet legible over a busy camera backdrop.
-    float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.55;
+    float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0) * 0.38;
 
     vec3 base = colDiffuse.rgb;
-    vec3 color = base * (0.30 + 0.80 * diff)
+    vec3 color = base * (0.52 + 0.62 * diff)
                + vec3(1.0, 0.97, 0.92) * spec
-               + vec3(0.35, 0.48, 0.95) * rim;
+               + vec3(1.00, 0.52, 0.72) * rim;
     color = mix(color, base * 1.7 + vec3(0.15), emissive);
     finalColor = vec4(color, colDiffuse.a);
 }
@@ -194,7 +198,7 @@ class PuppetRenderer:
 
 # Root height at which the feet touch the ground; above this the puppet is
 # airborne and the shadow should shrink away from it.
-_CONTACT_HEIGHT = 2.7
+_CONTACT_HEIGHT = 2.0
 
 
 def ground_shadow(joints: JointPose) -> tuple[rl.Vector3, float]:

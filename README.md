@@ -143,8 +143,13 @@ Semantics:
 uv run gesture-ai-puppet
 ```
 
-A humanoid mecha, built from primitives, driven live by your hand over a dimmed
-camera backdrop. Renders at 60 fps on integrated graphics.
+A chibi robot girl -- pink, with twin tails, a bow and a red skirt -- built
+from primitives and driven live by your hand over a dimmed camera backdrop.
+Renders at 60 fps on integrated graphics.
+
+Joint ranges are deliberately theatrical: an open palm throws both arms
+overhead, a fist tucks them in and drops into a crouch. Everything is a field on
+`RigMapping` in `src/gesture_ai/rig.py` if you want it calmer or wilder.
 
 | Key | Action |
 | --- | --- |
