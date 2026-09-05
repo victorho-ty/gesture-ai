@@ -148,7 +148,7 @@ camera backdrop. Renders at 60 fps on integrated graphics.
 
 | Key | Action |
 | --- | --- |
-| `h` | Overlay the tracked hand skeleton |
+| `h` | Overlay the tracked hand skeleton (also `--show-hand`) |
 | `b` | Toggle the camera backdrop |
 | `g` | Toggle the ground grid |
 | `m` | Toggle mirroring |

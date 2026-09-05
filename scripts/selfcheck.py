@@ -196,6 +196,37 @@ check("idle puppet is upright",
       "torso up vector is vertical")
 
 print()
+print("== motion: angular speed has no gimbal degeneracy ==")
+smoother = PoseSmoother()
+speeds, energies = [], []
+for step in range(361):
+    feats = F.hand_features(_Result(make_hand(roll=step * 1.5)))  # 90 deg/s at 60fps
+    pose = smoother.update(feats, True, 1 / 60)
+    if step > 40:  # let the filters settle
+        speeds.append(pose.motion.turn_speed)
+        energies.append(pose.motion.energy)
+check("steady rotation reads as a steady rate",
+      max(speeds) < 140.0 and min(speeds) > 60.0,
+      f"{min(speeds):.0f}-{max(speeds):.0f} deg/s for a true 90 deg/s")
+check("energy is not pinned by rotation alone", max(energies) < 0.95,
+      f"peak energy {max(energies):.2f}")
+
+print()
+print("== overlay: landmarks register to the backdrop ==")
+from gesture_ai.viewer import cover_fit
+
+same = cover_fit(960, 540, 1280, 720)
+check("matched aspect maps corner to corner",
+      same(0.0, 0.0) == (0.0, 0.0) and same(1.0, 1.0) == (1280.0, 720.0))
+check("matched aspect maps centre to centre", same(0.5, 0.5) == (640.0, 360.0))
+wide = cover_fit(960, 540, 800, 800)  # window taller than the camera
+cx, cy = wide(0.5, 0.5)
+check("mismatched aspect still centres", abs(cx - 400) < 1e-6 and abs(cy - 400) < 1e-6)
+check("mismatched aspect crops rather than stretches",
+      wide(0.0, 0.0)[0] < 0.0 and abs(wide(0.0, 0.0)[1]) < 1e-6,
+      "overflows horizontally, exact vertically")
+
+print()
 if FAILURES:
     print(f"{len(FAILURES)} FAILED: {', '.join(FAILURES)}")
     sys.exit(1)

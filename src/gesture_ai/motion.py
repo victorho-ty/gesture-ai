@@ -177,6 +177,7 @@ class PoseSmoother:
         self._pose = _FilterBank(63, min_cutoff, beta)
         self._presence = 0.0
         self._energy = 0.0
+        self._previous_basis: tuple[float, ...] | None = None
         self._last: SmoothedPose = SmoothedPose(present=0.0)
 
     def set_tuning(self, min_cutoff: float, beta: float) -> None:
@@ -237,7 +238,19 @@ class PoseSmoother:
         # of change -- differencing the smoothed output again would only add lag.
         vx, vy, _ = self._wrist.speeds()
         wrist_speed = math.hypot(vx, vy)
-        turn_speed = math.sqrt(sum(s * s for s in self._palm.speeds()))
+
+        # Angular speed from the rotation matrix, not from the euler angles.
+        # Euler rates blow up near gimbal lock even when the hand is barely
+        # moving, which pinned energy at 1.0 and left lean and glow maxed out.
+        # The relative rotation angle between two frames has no such
+        # degeneracy: trace(Rprev^T Rcur) is the elementwise dot of the nine
+        # components, and the angle follows from it directly.
+        turn_speed = 0.0
+        if self._previous_basis is not None and dt > 0.0:
+            trace = sum(a * b for a, b in zip(self._previous_basis, basis_flat))
+            cos_theta = max(-1.0, min(1.0, (trace - 1.0) * 0.5))
+            turn_speed = math.degrees(math.acos(cos_theta)) / dt
+        self._previous_basis = basis_flat
 
         # Weighted rather than summed: either kind of movement alone should be
         # able to reach full energy, but neither should saturate on its own

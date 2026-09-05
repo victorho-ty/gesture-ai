@@ -33,14 +33,17 @@ WINDOW_TITLE = "gesture-ai puppet"
 # nothing about steady-state performance.
 BENCH_WARMUP = 3.0
 
-# MediaPipe world landmarks are metres, Y-down, with -Z toward the camera.
-# raylib is Y-up with +Z toward the viewer, so Y and Z both flip.
-WORLD_SCALE = 14.0
+# Hand overlay, matching the original OpenCV preview in render.py: thin lines,
+# small filled joints. Orange is the exact joint colour from there, BGR
+# (0, 128, 255). The lines there were green; white reads better over a dimmed
+# camera backdrop, and is what was asked for.
+_HAND_LINE = rl.Color(236, 240, 248, 235)
+_HAND_DOT = rl.Color(255, 128, 0, 255)
+_HAND_LINE_WIDTH = 1.6
+_HAND_DOT_RADIUS = 3.0
 
 _BG = rl.Color(16, 17, 23, 255)
 _GRID = rl.Color(40, 42, 54, 255)
-_BONE = rl.Color(120, 130, 255, 255)
-_JOINT = rl.Color(255, 150, 60, 255)
 _TEXT = rl.Color(225, 228, 240, 255)
 _DIM = rl.Color(130, 135, 155, 255)
 _GOOD = rl.Color(120, 220, 140, 255)
@@ -48,12 +51,43 @@ _BAD = rl.Color(230, 110, 110, 255)
 _SHADOW = rl.Color(0, 0, 0, 90)
 
 
-def to_world(pose: tuple[float, ...], index: int) -> rl.Vector3:
-    """Convert one flattened world landmark into raylib space."""
-    x = pose[index * 3] * WORLD_SCALE
-    y = -pose[index * 3 + 1] * WORLD_SCALE
-    z = -pose[index * 3 + 2] * WORLD_SCALE
-    return rl.Vector3(x, y + 3.0, z)
+def cover_fit(src_w: int, src_h: int, dst_w: int, dst_h: int):
+    """Scale and offset that fill a window with a source image, cropping to fit.
+
+    Returned as a function mapping normalized 0..1 source coordinates to screen
+    pixels. The backdrop and the landmark overlay must share this, or the dots
+    drift off the fingers wherever the aspect ratios differ.
+    """
+    scale = max(dst_w / src_w, dst_h / src_h)
+    off_x = (src_w - dst_w / scale) * 0.5
+    off_y = (src_h - dst_h / scale) * 0.5
+
+    def to_screen(nx: float, ny: float) -> tuple[float, float]:
+        return (nx * src_w - off_x) * scale, (ny * src_h - off_y) * scale
+
+    return to_screen
+
+
+def draw_hand_overlay(screen, to_screen) -> None:
+    """Draw the tracked hand the way the OpenCV preview did.
+
+    Screen space rather than the 3D scene: these are normalized image
+    coordinates, so drawing them flat puts them exactly on the hand in the
+    backdrop, and 2D primitives give clean thin strokes where ``draw_line_3d``
+    and low-segment spheres looked ragged.
+    """
+    if len(screen) != 42:
+        return
+    points = [to_screen(screen[i * 2], screen[i * 2 + 1]) for i in range(21)]
+
+    for start, end in HAND_CONNECTIONS:
+        a, b = points[start], points[end]
+        rl.draw_line_ex(
+            rl.Vector2(a[0], a[1]), rl.Vector2(b[0], b[1]),
+            _HAND_LINE_WIDTH, _HAND_LINE,
+        )
+    for x, y in points:
+        rl.draw_circle_v(rl.Vector2(x, y), _HAND_DOT_RADIUS, _HAND_DOT)
 
 
 class Backdrop:
@@ -91,6 +125,8 @@ class Backdrop:
         screen_w = rl.get_screen_width()
         screen_h = rl.get_screen_height()
         # Cover the window while preserving aspect ratio: crop, never stretch.
+        # draw_hand_overlay uses the same fit via cover_fit, so the landmarks
+        # stay registered to the video underneath them.
         scale = max(screen_w / self._width, screen_h / self._height)
         crop_w = screen_w / scale
         crop_h = screen_h / scale
@@ -151,6 +187,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Run for N seconds, print timing statistics, and exit",
+    )
+    parser.add_argument(
+        "--show-hand",
+        action="store_true",
+        help="Start with the tracked hand overlay visible (toggled with h)",
     )
     parser.add_argument(
         "--no-backdrop",
@@ -215,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     backdrop = None if args.no_backdrop else Backdrop(
         args.capture_width, args.capture_height
     )
-    show_hand = False
+    show_hand = args.show_hand
     show_grid = False
     show_backdrop = backdrop is not None
 
@@ -277,15 +318,16 @@ def main(argv: list[str] | None = None) -> int:
             )
             puppet.draw(joints, camera)
 
-            if show_hand and len(pose.pose) == 63 and pose.present > 0.01:
-                points = [to_world(pose.pose, i) for i in range(21)]
-                for start, end in HAND_CONNECTIONS:
-                    rl.draw_line_3d(points[start], points[end], _BONE)
-                for i, point in enumerate(points):
-                    rl.draw_sphere_ex(
-                        point, 0.2 if i in (4, 8, 12, 16, 20) else 0.13, 6, 6, _JOINT
-                    )
             rl.end_mode_3d()
+
+            if show_hand and pose.present > 0.01:
+                draw_hand_overlay(
+                    pose.screen,
+                    cover_fit(
+                        args.capture_width, args.capture_height,
+                        rl.get_screen_width(), rl.get_screen_height(),
+                    ),
+                )
 
             _draw_hud(pose, tracker, stale_frames, smoother)
             rl.end_drawing()
