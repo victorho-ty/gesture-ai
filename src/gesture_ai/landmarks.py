@@ -40,6 +40,20 @@ HAND_CONNECTIONS: tuple[tuple[int, int], ...] = (
     (0, 17),
 )
 
+FINGER_NAMES: tuple[str, ...] = ("thumb", "index", "middle", "ring", "pinky")
+
+# Four-joint chain per finger, ordered proximal to distal. The thumb has no PIP
+# or DIP, so its chain is (CMC, MCP, IP, TIP) while the others are
+# (MCP, PIP, DIP, TIP); both are four joints, which lets callers walk every
+# finger with one loop.
+FINGER_CHAINS: tuple[tuple[int, int, int, int], ...] = (
+    (1, 2, 3, 4),
+    (5, 6, 7, 8),
+    (9, 10, 11, 12),
+    (13, 14, 15, 16),
+    (17, 18, 19, 20),
+)
+
 SCHEMA_VERSION = 1
 
 # Landmark indices used to count raised fingers.
@@ -63,6 +77,14 @@ def landmark_name(index: int) -> str:
             f"landmark index must be in 0..{LANDMARK_COUNT - 1}, got {index}"
         )
     return LANDMARK_NAMES[index]
+
+
+def landmark_index(name: str) -> int:
+    """Return the index of a landmark by its canonical name."""
+    try:
+        return LANDMARK_NAMES.index(name)
+    except ValueError as error:
+        raise ValueError(f"unknown landmark name {name!r}") from error
 
 
 def normalized_to_pixel(

@@ -20,7 +20,7 @@ _READY_COLOR = (0, 200, 0)
 _CONNECTION_COLOR = (0, 255, 0)
 _JOINT_COLOR = (0, 128, 255)
 _SELECTED_COLOR = (0, 255, 255)
-_CONTROLS = "r record | m mirror | [] joint | q quit"
+_CONTROLS = "r record | o osc | m mirror | [] joint | q quit"
 
 
 def _put_text(frame, text: str, origin: tuple[int, int], color, scale=0.55) -> None:
