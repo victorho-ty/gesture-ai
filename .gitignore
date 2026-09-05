@@ -14,3 +14,6 @@ wheels/
 # Runtime assets and capture output
 models/
 captures/
+
+# Screenshots from --screenshot
+puppet_*.png

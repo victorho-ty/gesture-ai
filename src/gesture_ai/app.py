@@ -19,6 +19,10 @@ from gesture_ai.render import draw_overlay
 DEFAULT_MODEL_PATH = Path("models") / "hand_landmarker.task"
 DEFAULT_OUTPUT_PATH = Path("captures") / "hand_landmarks.jsonl"
 
+DEFAULT_OSC_HOST = "127.0.0.1"
+DEFAULT_OSC_PORT = 7000
+DEFAULT_SPOUT_NAME = "gesture-ai"
+
 WINDOW_NAME = "gesture-ai"
 _KEY_ESCAPE = 27
 
@@ -116,6 +120,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Minimum hand tracking confidence in [0, 1]",
     )
     parser.add_argument(
+        "--osc",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Stream hand parameters over OSC (e.g. to TouchDesigner)",
+    )
+    parser.add_argument(
+        "--osc-host", default=DEFAULT_OSC_HOST, help="OSC destination host"
+    )
+    parser.add_argument(
+        "--osc-port", type=int, default=DEFAULT_OSC_PORT, help="OSC destination port"
+    )
+    parser.add_argument(
+        "--spout",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Share the camera frame as a Spout sender (Windows only)",
+    )
+    parser.add_argument(
+        "--spout-name", default=DEFAULT_SPOUT_NAME, help="Spout sender name"
+    )
+    parser.add_argument(
         "--download-model",
         action="store_true",
         help="Ensure the model file exists, print its path, and exit",
@@ -166,6 +191,27 @@ def main(argv: list[str] | None = None) -> int:
         min_tracking_confidence=args.tracking_confidence,
     )
 
+    # Imported lazily so the base application still runs when the optional
+    # streaming dependencies are not installed.
+    emitter = None
+    if args.osc:
+        from gesture_ai.osc import OscEmitter
+
+        emitter = OscEmitter(args.osc_host, args.osc_port)
+        print(f"Streaming OSC to {emitter.target}")
+
+    spout = None
+    if args.spout:
+        from gesture_ai.spout import SpoutSender, SpoutUnavailable
+
+        try:
+            spout = SpoutSender(args.spout_name, args.width, args.height)
+        except SpoutUnavailable as error:
+            capture.release()
+            print(error, file=sys.stderr)
+            return 1
+        print(f"Sharing camera frames as Spout sender {spout.name!r}")
+
     recorder = JsonlRecorder(args.output)
     mirror = args.mirror
     selected_landmark = args.joint
@@ -199,6 +245,16 @@ def main(argv: list[str] | None = None) -> int:
 
                 result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
+                # Emitted every frame, not only while recording: the receiver
+                # needs the no-hand frames to know tracking was lost.
+                if emitter is not None:
+                    emitter.write(result, timestamp_ms)
+
+                # Shared before draw_overlay so the receiver gets clean video
+                # rather than the debug skeleton.
+                if spout is not None:
+                    spout.send(frame)
+
                 if recording:
                     height, width = frame.shape[:2]
                     record = result_to_record(result, timestamp_ms, width, height)
@@ -224,6 +280,16 @@ def main(argv: list[str] | None = None) -> int:
                         print(f"Recording to {recorder.path}")
                     else:
                         print("Recording stopped.")
+                elif key == ord("o"):
+                    if emitter is None:
+                        from gesture_ai.osc import OscEmitter
+
+                        emitter = OscEmitter(args.osc_host, args.osc_port)
+                        print(f"Streaming OSC to {emitter.target}")
+                    else:
+                        emitter.close()
+                        emitter = None
+                        print("OSC streaming stopped.")
                 elif key == ord("["):
                     selected_landmark = (selected_landmark - 1) % LANDMARK_COUNT
                 elif key == ord("]"):
@@ -231,6 +297,10 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        if emitter is not None:
+            emitter.close()
+        if spout is not None:
+            spout.close()
         recorder.close()
         capture.release()
         cv2.destroyAllWindows()
